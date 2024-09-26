@@ -10,6 +10,6 @@ import {
 router.post("/create", verifyToken, create);
 router.get("/getPosts", getPosts);
 router.delete("/deletePost/:postId/:userId", verifyToken, deletePost);
-router.put("/updatepost/:postId/:userId", verifyToken, updatepost);
+router.put("/updatepost/:postId", verifyToken, updatepost);
 
 export default router;
