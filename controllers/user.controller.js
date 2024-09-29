@@ -1,8 +1,8 @@
 import bcryptjs from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
 import User from "../models/user.model.js";
-export const test = (req, res) => {
-  res.json({ message: "Api is working!" });
+export const test = async (req, res) => {
+  res.status(200).send("Api is working!");
 };
 
 export const updateUser = async (req, res, next) => {
@@ -67,12 +67,12 @@ export const deleteUser = async (req, res, next) => {
 
 export const signout = async (req, res, next) => {
   try {
-    res
-      .clearCookie("access_token")
-      .status(200)
-      .json("User has been signed out!");
+    res.clearCookie("access_token");
+    return res.status(200).json({ message: "Signed out successfully" });
   } catch (error) {
-    return next(error);
+    return res
+      .status(500)
+      .json({ message: "An error occurred during signout" });
   }
 };
 
@@ -114,13 +114,14 @@ export const getUsers = async (req, res, next) => {
       lastMonthUsers,
     });
   } catch (error) {
-    next(error);
+    return res.status(400).json({ message: error.message });
   }
 };
 
 export const getUser = async (req, res, next) => {
+  const id = req.params.id;
   try {
-    const user = await User.findById(req.params.userId);
+    const user = await User.findById(new Object(id));
     if (!user) {
       return next(errorHandler(404, "User not found"));
     }

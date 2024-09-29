@@ -79,6 +79,23 @@ export const getPosts = async (req, res, next) => {
 //   }
 // }
 
+export const getUserPosts = async (req, res, next) => {
+  const { userId } = req.params;
+  console.log("userId", typeof userId, userId);
+  try {
+    const posts = await Post.find({ userId: userId });
+
+    if (posts.length === 0) {
+      return res.status(200).json({ message: "No posts available!" });
+    }
+
+    return res.status(200).json(posts);
+  } catch (error) {
+    console.error("Error fetching user posts:", error);
+    return res.status(500).send("Something went wrong!");
+  }
+};
+
 export const deletePost = async (req, res, next) => {
   if (!req.user.isAdmin || req.user.id !== req.params.userId) {
     return next(errorHandler(403, "You are not allowed to delete this post"));

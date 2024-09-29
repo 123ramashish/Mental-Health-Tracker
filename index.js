@@ -7,6 +7,7 @@ import postRouter from "./routes/post.routes.js";
 import commentRouter from "./routes/comment.routes.js";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 dotenv.config();
@@ -25,25 +26,34 @@ mongoose
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, "/client/dist")));
-app.get("*", (req, res) =>
-  res.sendFile(path.join(__dirname, "/client/dist/index.html"))
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
 );
+
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "/client/dist")));
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
-
-app.listen(8000, () => {
-  console.log("Server is running on port 8000");
-});
 
 app.use("/api/user", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
+app.get("*", (req, res) =>
+  res.sendFile(path.join(__dirname, "/client/dist/index.html"))
+);
 app.use((err, req, res, next) => {
   const statusCode = req.statusCode || 500;
   const message = err.message || "Internal Server Error";
   return res.status(statusCode).json({ success: false, statusCode, message });
+});
+
+app.listen(5000, () => {
+  console.log("Server is running on port 5000");
 });

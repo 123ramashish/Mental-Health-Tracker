@@ -5,10 +5,12 @@ import {
   create,
   deletePost,
   getPosts,
+  getUserPosts,
   updatepost,
 } from "../controllers/post.controller.js";
 router.post("/create", verifyToken, create);
-router.get("/getPosts", getPosts);
+router.get("/getposts", getPosts);
+router.get("/getposts/:userId", getUserPosts);
 router.delete("/deletePost/:postId/:userId", verifyToken, deletePost);
 router.put("/updatepost/:postId", verifyToken, updatepost);
 
