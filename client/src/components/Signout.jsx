@@ -11,7 +11,7 @@ export default function Signout() {
   useEffect(() => {
     const handleSignout = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/user/signout", {
+        const res = await fetch("/api/user/signout", {
           method: "POST",
           mode: "cors",
           headers: {
