@@ -25,17 +25,13 @@ mongoose
   });
 
 const app = express();
-
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: /http:\/\/localhost:\d+$/,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
-
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "/client/dist")));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -45,6 +41,9 @@ app.use("/api/user", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "/client/dist")));
+
 app.get("*", (req, res) =>
   res.sendFile(path.join(__dirname, "/client/dist/index.html"))
 );
