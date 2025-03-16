@@ -6,7 +6,7 @@ import Home3 from '../components/home/Home3'
 export default function Home() {
   return (
     <>
-     <div className='mt-8'>
+     <div >
         <Home1 />
         <Home2 />
         <Home3 />

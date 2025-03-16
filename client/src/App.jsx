@@ -12,6 +12,8 @@ import Login from './pages/Login';
 import ForgotPassword from './components/ForgotPassword';
 import ContactPage from './pages/Contact';
 import NotFound from './pages/NotFound';
+import MoodTest from './pages/MoodTest';
+import AITherapist from './pages/AITherapist';
 export default function App() {
   return (
     <BrowserRouter>
@@ -25,7 +27,8 @@ export default function App() {
         <Route path="/signout" element={<Signout />} />
         <Route path="/forgotpassword" element={<ForgotPassword />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/test" element={<ContactPag />} />
+        <Route path="/test" element={<MoodTest />} />
+        <Route path="/therapist" element={<AITherapist />} />
         <Route path="*" element={<NotFound />} />
 
       </Routes>
