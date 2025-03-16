@@ -9,8 +9,13 @@ export default {
     "./src/**/*.{html,js,ts,jsx,tsx}",
     flowbite.content(),
   ],
-  theme: {
-    extend: {},
+ theme: {
+    extend: {
+      transitionProperty: {
+        'height': 'height',
+        'spacing': 'margin, padding',
+      }
+    }
   },
   plugins: [flowbite.plugin(), tailwindScrollbar],
 };

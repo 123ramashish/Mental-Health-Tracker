@@ -1,34 +1,45 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const userSchema = new mongoose.Schema(
-  {
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    profilePicture: {
-      type: String,
-      default:
-        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png",
-    },
-    isAdmin: {
-      type: Boolean,
-      default: false,
-    },
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address.']
   },
-  { timestamps: true }
-);
+  name: {
+    type: String,
+    required: true
+  },
+  phone:{
+type:Number,
+required:true,
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Non Binary'],
+    required: true
+  },
+  age: {
+    type: Number,
+    required: true,
+    min: 18 
+  },
+  otp:{
+type:Number,
+  },
+  journals: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Journal'
+  }]
+}, {
+  timestamps: true
+});
 
-const User = mongoose.model("User", userSchema);
-
+const User = mongoose.model('User ', userSchema);
 export default User;

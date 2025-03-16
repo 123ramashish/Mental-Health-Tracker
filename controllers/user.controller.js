@@ -1,70 +1,195 @@
-import bcryptjs from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
 import User from "../models/user.model.js";
+import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+dotenv.config();
+
 export const test = async (req, res) => {
   res.status(200).send("Api is working!");
 };
 
-export const updateUser = async (req, res, next) => {
-  if (req.user.id !== req.params.userId) {
-    return next(errorHandler(403, "You are not allowed to update this user!"));
-  }
-  if (req.body.password) {
-    if (req.body.password.length < 6) {
-      return next(errorHandler(400, "Password must be at least 6 characters!"));
+// Generate a random 6-digit OTP
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
+
+// Configure Nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS  
     }
-    req.body.password = bcryptjs.hashSync(req.body.password, 10);
-  }
-  if (req.body.username) {
-    if (req.body.username.length < 7 || req.body.username.length > 20) {
-      return next(
-        errorHandler(400, "Username must be between 7 and 20 characters")
-      );
+});
+
+// Send OTP to email
+export const sendOtpToEmail = async (req, res) => {
+    try {
+        const { email } = req.body; // Corrected to destructure directly from req.body
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User  not found, Sign-Up!' });
+        }
+        
+        const otp = generateOtp();
+        user.otp = otp;
+        await user.save();
+        
+        const mailOptions = {
+          from: `MoodVibe Support <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'MoodVibe - Password Reset OTP',
+          text: `Your MoodVibe password reset OTP is: ${otp}\n\nThis OTP is valid for 10 minutes.`,
+          html: `
+              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                  <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px 8px 0 0;">
+                      <h2 style="color: #4f46e5; margin: 0; font-size: 24px;">MoodVibe Password Reset</h2>
+                  </div>
+                  
+                  <div style="padding: 30px 20px;">
+                      <p style="font-size: 16px; color: #374151; margin-bottom: 25px;">
+                          Hey there, MoodViber!<br>
+                          We received a request to reset your password. Here's your One-Time Password:
+                      </p>
+                      
+                      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px; text-align: center; margin: 25px 0;">
+                          <h3 style="margin: 0; color: #1f2937; font-size: 32px; letter-spacing: 2px; font-weight: bold;">
+                              ${otp}
+                          </h3>
+                      </div>
+                      
+                      <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
+                          This OTP will expire in 10 minutes.<br>
+                          If you didn't request this password reset, please ignore this email.
+                      </p>
+                  </div>
+                  
+                  <div style="padding: 20px; background-color: #f8f9fa; border-radius: 0 0 8px 8px; text-align: center;">
+                      <p style="font-size: 12px; color: #6b7280; margin: 0;">
+                          Need help? Contact our support team at 
+                          <a href="mailto:support@moodvibe.com" style="color: #4f46e5; text-decoration: none;">support@moodvibe.com</a>
+                      </p>
+                      <p style="font-size: 12px; color: #6b7280; margin: 10px 0 0 0;">
+                          © ${new Date().getFullYear()} MoodVibe. All rights reserved.
+                      </p>
+                  </div>
+              </div>
+          `
+      };
+        
+        await transporter.sendMail(mailOptions);
+        return res.status(200).json({ message: 'OTP sent successfully' });
+        
+    } catch (error) {
+        console.error(error.message); // Log the error for debugging
+        return res.status(500).json({ error: error.message });
     }
-    if (req.body.username.includes(" ")) {
-      return next(errorHandler(400, "Username cannot contain spaces"));
-    }
-    if (req.body.username !== req.body.username.toLowerCase()) {
-      return next(errorHandler(400, "Username must be lowercase"));
-    }
-    if (!req.body.username.match(/^[a-zA-Z0-9]+$/)) {
-      return next(
-        errorHandler(400, "Username can only contain letters and numbers")
-      );
-    }
-  }
+};
+// Verify OTP
+export const verifyOtp = async (req, res) => {
+
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.userId,
-      {
-        $set: {
-          username: req.body.username,
-          email: req.body.email,
-          profilePicture: req.body.profilePicture,
-          password: req.body.password,
-        },
-      },
-      { new: true }
-    );
-    const { password, ...rest } = updatedUser._doc;
-    res.status(200).json(rest);
+      const { email, otp } = await req.body;
+      const user = await User.findOne({ email });
+      if (!user || user.otp !== parseInt(otp)) {
+          return res.status(400).json({ message: 'Invalid OTP' });
+      }
+      
+      user.otp = null;
+      await user.save();
+      
+      return res.status(200).json({ message: 'OTP verified successfully' });
   } catch (error) {
-    next(error);
+      return res.status(500).json({ error: error.message });
   }
 };
 
-export const deleteUser = async (req, res, next) => {
-  if (!req.user.isAdmin && req.user.id !== req.params.userId) {
-    return next(errorHandler(403, "You are not allowed to delete this user!"));
-  }
+// Update Password
+export const updatePassword = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.userId);
-    res.status(200).json("User has been deleted!");
+    const { email, newPassword } = req.body;
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+    
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+    
+    return res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
+// contact function
+
+export const contact = async (req, res, next) => {
+    try {
+      const { name, email, subject, message } = req.body;
+  
+      // Validate required fields
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+  
+      const mailOptions = {
+        from: `MoodVibe Support <${process.env.EMAIL_USER}>`,
+        to: process.env.EMAIL_USER,
+        replyTo: email,
+        subject: `MoodVibe Contact Form: ${subject}`,
+        text: `New contact form submission:\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px 8px 0 0;">
+              <h2 style="color: #4f46e5; margin: 0; font-size: 24px;">New Contact Form Submission</h2>
+            </div>
+            
+            <div style="padding: 30px 20px;">
+              <div style="margin-bottom: 25px;">
+                <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">
+                  <strong>Name:</strong> ${name}
+                </p>
+                <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">
+                  <strong>Email:</strong> <a href="mailto:${email}">${email}</a>
+                </p>
+                <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">
+                  <strong>Subject:</strong> ${subject}
+                </p>
+              </div>
+              
+              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 6px;">
+                <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">Message:</h3>
+                <p style="font-size: 16px; color: #374151; margin: 0; white-space: pre-wrap;">${message}</p>
+              </div>
+            </div>
+            
+            <div style="padding: 20px; background-color: #f8f9fa; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="font-size: 12px; color: #6b7280; margin: 0;">
+                This message was sent via the MoodVibe contact form
+              </p>
+              <p style="font-size: 12px; color: #6b7280; margin: 10px 0 0 0;">
+                © ${new Date().getFullYear()} MoodVibe. All rights reserved.
+              </p>
+            </div>
+          </div>
+        `
+      };
+  
+      // Send email
+      await transporter.sendMail(mailOptions);
+      
+      return res.status(200).json({ message: 'Your message has been sent successfully' });
+      
+    } catch (error) {
+      console.error('Contact form error:', error);
+      return res.status(500).json({ 
+        message: "An error occurred while processing your request. Please try again later." 
+      });
+    }
+  };
+// signout function
 export const signout = async (req, res, next) => {
   try {
     res.clearCookie("access_token");
@@ -73,61 +198,5 @@ export const signout = async (req, res, next) => {
     return res
       .status(500)
       .json({ message: "An error occurred during signout" });
-  }
-};
-
-export const getUsers = async (req, res, next) => {
-  if (!req.user.isAdmin) {
-    return next(errorHandler(403, "You are not allowed to see all users"));
-  }
-  try {
-    const startIndex = parseInt(req.query.startIndex) || 0;
-    const limit = parseInt(req.query.limit) || 9;
-    const sortDirection = req.query.sort === "asc" ? 1 : -1;
-
-    const users = await User.find()
-      .sort({ createdAt: sortDirection })
-      .skip(startIndex)
-      .limit(limit);
-
-    const usersWithoutPassword = users.map((user) => {
-      const { password, ...rest } = user._doc;
-      return rest;
-    });
-
-    const totalUsers = await User.countDocuments();
-
-    const now = new Date();
-
-    const oneMonthAgo = new Date(
-      now.getFullYear(),
-      now.getMonth() - 1,
-      now.getDate()
-    );
-    const lastMonthUsers = await User.countDocuments({
-      createdAt: { $gte: oneMonthAgo },
-    });
-
-    res.status(200).json({
-      users: usersWithoutPassword,
-      totalUsers,
-      lastMonthUsers,
-    });
-  } catch (error) {
-    return res.status(400).json({ message: error.message });
-  }
-};
-
-export const getUser = async (req, res, next) => {
-  const id = req.params.id;
-  try {
-    const user = await User.findById(new Object(id));
-    if (!user) {
-      return next(errorHandler(404, "User not found"));
-    }
-    const { password, ...rest } = user._doc;
-    res.status(200).json(rest);
-  } catch (error) {
-    next(error);
   }
 };

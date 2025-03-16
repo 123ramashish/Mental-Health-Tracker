@@ -1,48 +1,50 @@
-import User from "../models/user.model.js";
-import bcryptjs from "bcryptjs";
 import { errorHandler } from "../utils/error.js";
 import jwt from "jsonwebtoken";
-export const signup = async (req, res, next) => {
+import User from "../models/user.model.js";
+import bcrypt from "bcryptjs";
+
+export const signup = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-    if (
-      !username ||
-      !email ||
-      !password ||
-      username === "" ||
-      email === "" ||
-      password === ""
-    ) {
-      return next(errorHandler(400, "All fields are required!"));
+    const {name,email,phone,password,gender,age}=await req.body;
+    // Check if the email already exists
+    const exist = await User.findOne({ email});
+    if (exist) {
+      return res.status(409).json({ msg: 'Email already exists please signIn!' });
     }
-    const hashedPassword = await bcryptjs.hashSync(password, 10);
-    const newUser = new User({
-      username,
-      email,
-      password: hashedPassword,
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(password, salt);
+
+    // Create a new user instance
+    const newUser  = new User({
+      email,name,phone,password:hashPassword,gender,age
     });
-    await newUser.save();
-    return res.json({ message: "Signup successful!" });
+
+    // Save the new user to the database
+    await newUser .save();
+    return res.status(201).json({ msg: 'User  created successfully!', user: newUser  });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.log(error.message)
+    return res.status(500).json({ error: error.message });
   }
 };
 
 export const signin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = await req.body;
     if (!email || !password || email === "" || password === "") {
       return next(errorHandler(400, "All fields are required!"));
     }
-    const validUser = await User.findOne({ email });
+    const validUser = await User.findOne({email:email});
     if (!validUser) {
       return next(errorHandler(404, "User not found!"));
     }
-
-    const validPassword = await bcryptjs.compare(password, validUser.password);
-    if (!validPassword) {
-      return next(errorHandler(400, "Invalid password"));
+    const isMatch = await bcrypt.compare(password, validUser.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid password' });
     }
+
     const token = jwt.sign(
       { id: validUser._id, isAdmin: validUser.isAdmin },
       process.env.JWT_SECRET,
@@ -59,6 +61,7 @@ export const signin = async (req, res, next) => {
       })
       .json(rest);
   } catch (error) {
+    console.log(error.message)
     return next(errorHandler(400, "Invalid credentials!"));
   }
 };

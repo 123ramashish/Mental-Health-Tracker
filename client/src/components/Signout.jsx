@@ -11,7 +11,7 @@ export default function Signout() {
   useEffect(() => {
     const handleSignout = async () => {
       try {
-        const res = await fetch("/api/user/signout", {
+        const res = await fetch("http://localhost:5000/api/user/signout", {
           method: "POST",
           mode: "cors",
           headers: {
@@ -27,7 +27,7 @@ export default function Signout() {
           } else {
             console.log("Signout successful:", data.message);
             dispatch(signoutSuccess());
-            navigate("/signin");
+            navigate("/login");
           }
         } else {
           console.error("Unexpected response format:", res);
@@ -40,7 +40,7 @@ export default function Signout() {
     if (currentUser) {
       handleSignout();
     } else {
-      navigate("/signin");
+      navigate("/login");
     }
   }, [dispatch, navigate, currentUser]);
 
