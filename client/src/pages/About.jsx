@@ -1,4 +1,5 @@
 const AboutPage = () => {
+ 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -10,6 +11,7 @@ const AboutPage = () => {
           <p className="text-xl md:text-2xl mb-8">
             Your companion in emotional wellness and self-discovery
           </p>
+      
         </div>
       </div>
 
